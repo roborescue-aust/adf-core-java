@@ -27,17 +27,42 @@ import java.util.stream.Collectors;
 
 /**
  * 动作清理
+ *
+ * @author <a href="https://downsxu.top">DownsXu</a>
  */
 public class DefaultExtActionClear extends ExtAction {
 
-  private PathPlanning pathPlanning;//路径
+  /**
+   *路径规划算法
+   */
+  private PathPlanning pathPlanning;
 
+  /**
+   *清理距离
+   */
   private int clearDistance;
+
+
   private int forcedMove;
+
+  /**
+   * 表示目标agent是否需要休息的阈值
+   */
   private int thresholdRest;
+
+  /**
+   * 内核时间
+   */
   private int kernelTime;
 
+  /**
+   * 动作目标
+   */
   private EntityID target;
+
+  /**
+   * 可能作为目标的实体的EntityID的集合
+   */
   private Map<EntityID, Set<Point2D>> movePointCache;
   private int oldClearX;
   private int oldClearY;
@@ -69,6 +94,13 @@ public class DefaultExtActionClear extends ExtAction {
   }
 
 
+  /**
+   * 预计算时执行的方法
+   *
+   * @param precomputeData 预计算数据
+   * @return this
+   * @author <a href="https://downsxu.top">DownsXu</a>
+   */
   @Override
   public ExtAction precompute(PrecomputeData precomputeData) {
     super.precompute(precomputeData);
@@ -84,7 +116,13 @@ public class DefaultExtActionClear extends ExtAction {
     return this;
   }
 
-
+  /**
+   * 预计算模式的初始化处理方法
+   *
+   * @param precomputeData 预计算数据
+   * @return this
+   * @author <a href="https://downsxu.top">DownsXu</a>
+   */
   @Override
   public ExtAction resume(PrecomputeData precomputeData) {
     super.resume(precomputeData);
@@ -100,7 +138,13 @@ public class DefaultExtActionClear extends ExtAction {
     return this;
   }
 
-
+  /**
+   * 无预计算模式的初始化处理方法
+   *
+   * @param precomputeData 预计算数据
+   * @return this
+   * @author <a href="https://downsxu.top">DownsXu</a>
+   */
   @Override
   public ExtAction preparate() {
     super.preparate();
@@ -116,7 +160,13 @@ public class DefaultExtActionClear extends ExtAction {
     return this;
   }
 
-
+  /**
+   * 每个回合都会用这个方法来更新agent所持有的信息
+   *
+   * @param messageManager 消息管理器
+   * @return this
+   * @author <a href="https://downsxu.top">DownsXu</a>
+   */
   @Override
   public ExtAction updateInfo(MessageManager messageManager) {
     super.updateInfo(messageManager);
@@ -128,6 +178,13 @@ public class DefaultExtActionClear extends ExtAction {
   }
 
 
+  /**
+   * 设置目标,给{@link #targetID}赋值
+   *
+   * @param targetID 表示操作目标的EntityID
+   * @return this
+   * @author <a href="https://downsxu.top">DownsXu</a>
+   */
   @Override
   public ExtAction setTarget(EntityID target) {
     this.target = null;
@@ -145,6 +202,18 @@ public class DefaultExtActionClear extends ExtAction {
   }
 
 
+  /**
+   * 计算agent应该的动作
+   * <p>
+   * <ol>
+   *     <li>先看缓存中是否存在目标,如果有目标,则直接使用缓存中的目标
+   *     <li>判断agent是否在障碍中,如果在障碍中,则调用{@link #getShrinkClearAction(EntityID)}方法清除障碍
+   *     <li>判断agent是否被卡住,如果被卡住,则调用{@link #getDefaultAction()}方法获得一个动作
+   * </ol>
+   *
+   * @return this
+   * @author <a href="https://downsxu.top">DownsXu</a>
+   */
   @Override
   public ExtAction calc() {
     this.result = null;
