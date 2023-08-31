@@ -17,15 +17,15 @@ import rescuecore2.worldmodel.EntityID;
 import java.util.Map;
 
 /**
- * 避难所的默认策略类
+ * 救护中心的默认策略
  *
  * @author <a href="https://roozen.top">Roozen</a>
  */
 public class DefaultTacticsAmbulanceCentre extends TacticsAmbulanceCentre {
 
-    private TargetAllocator allocator;
-    private CommandPicker picker;
-    private Boolean isVisualDebug;
+    private TargetAllocator allocator; // 目标分配器
+    private CommandPicker picker; // 命令选择器
+    private Boolean isVisualDebug; // 是否启用可视化调试模式
 
     /**
      * 初始化方法
@@ -50,11 +50,11 @@ public class DefaultTacticsAmbulanceCentre extends TacticsAmbulanceCentre {
         messageManager.setMessageCoordinator(moduleManager.getMessageCoordinator(
                 "MessageManager.CenterMessageCoordinator",
                 "adf.impl.module.comm.DefaultMessageCoordinator"));
+        // 根据场景模式选择目标分配器和命令选择器
         switch (scenarioInfo.getMode()) {
             case PRECOMPUTATION_PHASE:
             case PRECOMPUTED:
             case NON_PRECOMPUTE:
-                // 获取目标分配器和指令选择器
                 this.allocator = moduleManager.getModule(
                         "DefaultTacticsAmbulanceCentre.TargetAllocator",
                         "adf.impl.module.complex.DefaultAmbulanceTargetAllocator");
@@ -73,7 +73,7 @@ public class DefaultTacticsAmbulanceCentre extends TacticsAmbulanceCentre {
     }
 
     /**
-     * 思考方法
+     * 策略思考方法
      * 在此方法中进行模块信息更新、可视化调试和发送消息等操作
      *
      * @param agentInfo      代理的信息
@@ -97,8 +97,9 @@ public class DefaultTacticsAmbulanceCentre extends TacticsAmbulanceCentre {
                     scenarioInfo);
         }
 
-        // 获取目标分配器的结果，并根据结果发送消息
+        // 进行目标分配
         Map<EntityID, EntityID> allocatorResult = this.allocator.calc().getResult();
+        // 根据目标分配结果进行指令生成
         for (CommunicationMessage message : this.picker
                 .setAllocatorResult(allocatorResult).calc().getResult()) {
             messageManager.addMessage(message);
@@ -106,7 +107,7 @@ public class DefaultTacticsAmbulanceCentre extends TacticsAmbulanceCentre {
     }
 
     /**
-     * 恢复方法
+     * 策略恢复方法
      * 在precompute恢复阶段进行模块的恢复操作
      *
      * @param agentInfo      代理的信息
@@ -132,7 +133,7 @@ public class DefaultTacticsAmbulanceCentre extends TacticsAmbulanceCentre {
     }
 
     /**
-     * 准备方法
+     * 策略准备方法
      * 在precompute准备阶段进行模块的准备操作
      *
      * @param agentInfo     代理的信息

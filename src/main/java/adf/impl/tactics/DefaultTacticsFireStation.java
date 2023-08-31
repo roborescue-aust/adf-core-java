@@ -18,15 +18,12 @@ import java.util.Map;
 
 /**
  * 消防局的默认策略
- * <p>
- * 策略主要包括目标分配和指令生成两个组件
- * <p>
  * @author <a href="https://roozen.top">Roozen</a>
  */
 public class DefaultTacticsFireStation extends TacticsFireStation {
 
-    private TargetAllocator allocator; // 目标分配组件
-    private CommandPicker picker; // 指令生成组件
+    private TargetAllocator allocator; // 目标分配器
+    private CommandPicker picker; // 命令选择器
     private Boolean isVisualDebug; // 是否进行可视化调试
 
     /**
@@ -38,6 +35,7 @@ public class DefaultTacticsFireStation extends TacticsFireStation {
      * @param moduleManager  模块管理器
      * @param messageManager 消息管理器
      * @param debugData      调试数据
+     * @author <a href="https://roozen.top">Roozen</a>
      */
     @Override
     public void initialize(AgentInfo agentInfo, WorldInfo worldInfo,
@@ -51,7 +49,7 @@ public class DefaultTacticsFireStation extends TacticsFireStation {
                 "MessageManager.CenterMessageCoordinator",
                 "adf.impl.module.comm.DefaultMessageCoordinator"));
 
-        // 根据场景模式选择目标分配组件和指令生成组件
+        // 根据场景模式选择目标分配器和命令选择器
         switch (scenarioInfo.getMode()) {
             case PRECOMPUTATION_PHASE:
             case PRECOMPUTED:
@@ -64,7 +62,7 @@ public class DefaultTacticsFireStation extends TacticsFireStation {
                         "adf.impl.centralized.DefaultCommandPickerFire");
                 break;
         }
-        // 注册目标分配组件和指令生成组件
+        // 注册模块
         registerModule(this.allocator);
         registerModule(this.picker);
 
@@ -75,7 +73,8 @@ public class DefaultTacticsFireStation extends TacticsFireStation {
 
 
     /**
-     * 策略思考
+     * 策略思考方法
+     * 在此方法中进行模块信息更新、可视化调试和发送消息等操作
      *
      * @param agentInfo      智能体信息
      * @param worldInfo      世界信息
@@ -108,7 +107,8 @@ public class DefaultTacticsFireStation extends TacticsFireStation {
 
 
     /**
-     * 策略恢复
+     * 策略恢复方法
+     * 在precompute恢复阶段进行模块的恢复操作
      *
      * @param agentInfo      智能体信息
      * @param worldInfo      世界信息
@@ -133,7 +133,8 @@ public class DefaultTacticsFireStation extends TacticsFireStation {
 
 
     /**
-     * 策略准备
+     * 策略准备方法
+     * 在precompute准备阶段进行模块的准备操作
      *
      * @param agentInfo     智能体信息
      * @param worldInfo     世界信息

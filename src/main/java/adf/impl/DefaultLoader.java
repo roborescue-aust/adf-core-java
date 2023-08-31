@@ -5,7 +5,7 @@ import adf.core.component.tactics.*;
 import adf.impl.tactics.*;
 
 /**
- *
+ * 默认策略加载器
  */
 public class DefaultLoader extends AbstractLoader {
 

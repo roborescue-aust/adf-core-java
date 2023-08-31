@@ -32,7 +32,6 @@ import java.util.Objects;
 
 /**
  * 警察部队的默认策略
- * Default strategy for the PoliceForce agent.
  * <p>
  * @author <a href="https://roozen.top">Roozen</a>
  */
@@ -55,10 +54,23 @@ public class DefaultTacticsPoliceForce extends TacticsPoliceForce {
 
     private Boolean isVisualDebug; // 是否启用可视化调试
 
+    /**
+     * 初始化方法
+     * 在此方法中进行模块的初始化和注册
+     *
+     * @param agentInfo      代理的信息
+     * @param worldInfo      世界的信息
+     * @param scenarioInfo   场景的信息
+     * @param moduleManager  模块管理器
+     * @param messageManager 消息管理器
+     * @param developData    开发调试数据
+     * @author <a href="https://roozen.top">Roozen</a>
+     */
     @Override
     public void initialize(AgentInfo agentInfo, WorldInfo worldInfo,
                            ScenarioInfo scenarioInfo, ModuleManager moduleManager,
                            MessageManager messageManager, DevelopData developData) {
+        // 设置消息管理器的订阅者和协调者
         messageManager.setChannelSubscriber(
                 moduleManager.getChannelSubscriber("MessageManager.PlatoonChannelSubscriber",
                         "adf.impl.module.comm.DefaultChannelSubscriber"));
@@ -66,20 +78,23 @@ public class DefaultTacticsPoliceForce extends TacticsPoliceForce {
                 moduleManager.getMessageCoordinator("MessageManager.PlatoonMessageCoordinator",
                         "adf.impl.module.comm.DefaultMessageCoordinator"));
 
+        // Index entity types
         worldInfo.indexClass(StandardEntityURN.ROAD, StandardEntityURN.HYDRANT,
                 StandardEntityURN.BUILDING, StandardEntityURN.REFUGE,
                 StandardEntityURN.BLOCKADE);
-
+        // 创建消息工具
         this.messageTool =
                 new MessageTool(scenarioInfo, developData);
-
+        // 从配置中获取可视化调试标志
         this.isVisualDebug = (scenarioInfo.isDebugMode() && moduleManager
                 .getModuleConfig().getBooleanValue("VisualDebug", false));
 
+        // 从场景信息中获取clearDistance
         this.clearDistance = scenarioInfo.getClearRepairDistance();
+        // 将最近收到的命令初始化为空
         this.recentCommand = null;
 
-        // 初始化算法模块和扩展动作
+        // 根据仿真模式初始化算法模块和扩展动作
         switch (scenarioInfo.getMode()) {
             case PRECOMPUTATION_PHASE:
             case PRECOMPUTED:
@@ -103,6 +118,7 @@ public class DefaultTacticsPoliceForce extends TacticsPoliceForce {
                         "adf.impl.centralized.DefaultCommandExecutorScoutPolice");
                 break;
         }
+        // 注册模块
         registerModule(this.search);
         registerModule(this.roadDetector);
         registerModule(this.actionExtClear);
@@ -111,6 +127,19 @@ public class DefaultTacticsPoliceForce extends TacticsPoliceForce {
         registerModule(this.commandExecutorScout);
     }
 
+
+    /**
+     * 预计算
+     * 在precompute恢复阶段进行模块的恢复操作
+     *
+     * @param agentInfo      代理的信息
+     * @param worldInfo      世界的信息
+     * @param scenarioInfo   场景的信息
+     * @param moduleManager  模块管理器
+     * @param precomputeData 预计算数据
+     * @param developData    开发调试数据
+     * @author <a href="https://roozen.top">Roozen</a>
+     */
     @Override
     public void precompute(AgentInfo agentInfo, WorldInfo worldInfo,
                            ScenarioInfo scenarioInfo, ModuleManager moduleManager,
@@ -118,55 +147,94 @@ public class DefaultTacticsPoliceForce extends TacticsPoliceForce {
         modulesPrecompute(precomputeData);
     }
 
+    /**
+     * 恢复方法
+     * 在precompute恢复阶段进行模块的恢复操作
+     *
+     * @param agentInfo      代理的信息
+     * @param worldInfo      世界的信息
+     * @param scenarioInfo   场景的信息
+     * @param moduleManager  模块管理器
+     * @param precomputeData 预计算数据
+     * @param developData    开发调试数据
+     * @author <a href="https://roozen.top">Roozen</a>
+     */
     @Override
     public void resume(AgentInfo agentInfo, WorldInfo worldInfo,
                        ScenarioInfo scenarioInfo, ModuleManager moduleManager,
                        PrecomputeData precomputeData, DevelopData developData) {
+        // 恢复模块
         modulesResume(precomputeData);
 
+        // 如果进行可视化调试，则显示时间步信息
         if (isVisualDebug) {
             WorldViewLauncher.getInstance().showTimeStep(agentInfo, worldInfo,
                     scenarioInfo);
         }
     }
-
+    /**
+     * 策略准备方法
+     * 在precompute准备阶段进行模块的准备操作
+     *
+     * @param agentInfo     智能体信息
+     * @param worldInfo     世界信息
+     * @param scenarioInfo  场景信息
+     * @param moduleManager 模块管理器
+     * @param developData     调试数据
+     */
     @Override
     public void preparate(AgentInfo agentInfo, WorldInfo worldInfo,
                           ScenarioInfo scenarioInfo, ModuleManager moduleManager,
                           DevelopData developData) {
+        // 模块准备
         modulesPreparate();
 
+        // 如果进行可视化调试，则显示时间步信息
         if (isVisualDebug) {
             WorldViewLauncher.getInstance().showTimeStep(agentInfo, worldInfo,
                     scenarioInfo);
         }
     }
-
+    /**
+     * 策略思考方法
+     * 在此方法中进行模块信息更新、可视化调试和发送消息等操作
+     *
+     * @param agentInfo      智能体信息
+     * @param worldInfo      世界信息
+     * @param scenarioInfo   场景信息
+     * @param moduleManager  模块管理器
+     * @param messageManager 消息管理器
+     * @param developData      调试数据
+     */
     @Override
     public Action think(AgentInfo agentInfo, WorldInfo worldInfo,
                         ScenarioInfo scenarioInfo, ModuleManager moduleManager,
                         MessageManager messageManager, DevelopData developData) {
+        // 反映收到的消息
         this.messageTool.reflectMessage(agentInfo, worldInfo, scenarioInfo,
                 messageManager);
+        // 发送请求消息
         this.messageTool.sendRequestMessages(agentInfo, worldInfo, scenarioInfo,
                 messageManager);
+        //发送信息消息
         this.messageTool.sendInformationMessages(agentInfo, worldInfo, scenarioInfo,
                 messageManager);
-
+        // 根据收到的消息更新模块信息
         modulesUpdateInfo(messageManager);
-
+        // 显示可视化调试（如果已启用）
         if (isVisualDebug) {
             WorldViewLauncher.getInstance().showTimeStep(agentInfo, worldInfo,
                     scenarioInfo);
         }
-
+        // 获取当前代理及其 ID
         PoliceForce agent = (PoliceForce) agentInfo.me();
         EntityID agentID = agent.getID();
 
-        // 命令处理
+        // 处理收到的命令
         for (CommunicationMessage message : messageManager
                 .getReceivedMessageList(CommandScout.class)) {
             CommandScout command = (CommandScout) message;
+            // 如果命令目标 ID 与代理 ID 相同，设置recentCommand和commandExecutorScout
             if (command.isToIDDefined() && Objects.requireNonNull(command.getToID())
                     .getValue() == agentID.getValue()) {
                 this.recentCommand = command;
@@ -176,13 +244,14 @@ public class DefaultTacticsPoliceForce extends TacticsPoliceForce {
         for (CommunicationMessage message : messageManager
                 .getReceivedMessageList(CommandPolice.class)) {
             CommandPolice command = (CommandPolice) message;
+            // 如果命令目标 ID 与代理 ID 相同，设置recentCommand和commandExecutorScout
             if (command.isToIDDefined() && Objects.requireNonNull(command.getToID())
                     .getValue() == agentID.getValue()) {
                 this.recentCommand = command;
                 this.commandExecutorPolice.setCommand(command);
             }
         }
-
+        // 如果找到有效的最近命令，执行相应的操作，然后返回action
         if (this.recentCommand != null) {
             Action action = null;
             if (this.recentCommand.getClass() == CommandPolice.class) {
@@ -196,31 +265,46 @@ public class DefaultTacticsPoliceForce extends TacticsPoliceForce {
             }
         }
 
-        // 自主行动
+        // 如果没有找到有效的最近命令，则计算自主操作的目标
+
+        // 首先从道路探测器获取目标
         EntityID target = this.roadDetector.calc().getTarget();
+        // 清理动作根据探测器给出的目标计算需要执行的动作
         Action action = this.actionExtClear.setTarget(target).calc().getAction();
+        // 如果找到下一步将要执行的动作则执行并返回
         if (action != null) {
             this.sendActionMessage(worldInfo, messageManager, agent, action);
             return action;
         }
-
+        // 如果没有找到，则根据搜索算法获取目标
         target = this.search.calc().getTarget();
+        // 清理动作根据搜索算法给出的目标计算需要执行的动作
         action = this.actionExtClear.setTarget(target).calc().getAction();
         if (action != null) {
             this.sendActionMessage(worldInfo, messageManager, agent, action);
             return action;
         }
-
+        // 如果未找到有效的动作，发送 REST 操作消息，执行休息动作并返回
         messageManager.addMessage(new MessagePoliceForce(true, agent,
                 MessagePoliceForce.ACTION_REST, agent.getPosition()));
         return new ActionRest();
     }
-
+    /**
+     * 向消息管理器发送操作消息。
+     *
+     * @param messageManager The message manager
+     * @param policeForce      The policeForce agent
+     * @param action         The action to be sent
+     * @author <a href="https://roozen.top">Roozen</a>
+     */
     private void sendActionMessage(WorldInfo worldInfo,
-                                   MessageManager messageManager, PoliceForce policeForce, Action action) {
+                                   MessageManager messageManager,
+                                   PoliceForce policeForce, Action action) {
         Class<? extends Action> actionClass = action.getClass();
         int actionIndex = -1;
         EntityID target = null;
+
+        // 根据动作类型确定动作索引和目标
         if (actionClass == ActionMove.class) {
             List<EntityID> path = ((ActionMove) action).getPath();
             actionIndex = MessagePoliceForce.ACTION_MOVE;
@@ -245,6 +329,7 @@ public class DefaultTacticsPoliceForce extends TacticsPoliceForce {
             target = policeForce.getPosition();
         }
 
+        // 如果找到有效的操作索引，发送操作消息
         if (actionIndex != -1) {
             messageManager.addMessage(
                     new MessagePoliceForce(true, policeForce, actionIndex, target));
