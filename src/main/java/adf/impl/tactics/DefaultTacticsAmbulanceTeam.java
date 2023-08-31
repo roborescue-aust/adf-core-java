@@ -84,7 +84,7 @@ public class DefaultTacticsAmbulanceTeam extends TacticsAmbulanceTeam {
                 "MessageManager.PlatoonMessageCoordinator",
                 "adf.impl.module.comm.DefaultMessageCoordinator"));
 
-        // 告诉此索引记住特定类别的实体。
+        // Index entity types
         worldInfo.indexClass(StandardEntityURN.CIVILIAN,
                 StandardEntityURN.FIRE_BRIGADE, StandardEntityURN.POLICE_FORCE,
                 StandardEntityURN.AMBULANCE_TEAM, StandardEntityURN.ROAD,
@@ -96,7 +96,7 @@ public class DefaultTacticsAmbulanceTeam extends TacticsAmbulanceTeam {
         // 创建消息工具
         this.messageTool = new MessageTool(scenarioInfo, developData);
 
-        // 从方案配置中获取可视化调试标志
+        // 从配置中获取可视化调试标志
         this.isVisualDebug = (scenarioInfo.isDebugMode() && moduleManager
                 .getModuleConfig().getBooleanValue("VisualDebug", false));
 
@@ -176,7 +176,7 @@ public class DefaultTacticsAmbulanceTeam extends TacticsAmbulanceTeam {
         // 恢复模块
         modulesResume(precomputeData);
 
-        // 显示可视化调试（如果已启用）
+        // 如果进行可视化调试，则显示时间步信息
         if (isVisualDebug) {
             WorldViewLauncher.getInstance().showTimeStep(agentInfo, worldInfo,
                     scenarioInfo);
@@ -198,10 +198,10 @@ public class DefaultTacticsAmbulanceTeam extends TacticsAmbulanceTeam {
     public void preparate(AgentInfo agentInfo, WorldInfo worldInfo,
                           ScenarioInfo scenarioInfo, ModuleManager moduleManager,
                           DevelopData developData) {
-        // 准备模块
+        // 模块准备
         modulesPreparate();
 
-        // 显示可视化调试（如果已启用）
+        // 如果进行可视化调试，则显示时间步信息
         if (isVisualDebug) {
             WorldViewLauncher.getInstance().showTimeStep(agentInfo, worldInfo,
                     scenarioInfo);
@@ -209,7 +209,7 @@ public class DefaultTacticsAmbulanceTeam extends TacticsAmbulanceTeam {
     }
 
     /**
-     * 思考方法
+     * 策略思考方法
      * 在此方法中进行模块信息更新、可视化调试和发送消息等操作
      *
      * @param agentInfo      代理的信息
@@ -253,7 +253,7 @@ public class DefaultTacticsAmbulanceTeam extends TacticsAmbulanceTeam {
         for (CommunicationMessage message : messageManager
                 .getReceivedMessageList(CommandScout.class)) {
             CommandScout command = (CommandScout) message;
-            // 如果命令目标 ID 与代理 ID 相同，请设置最近的命令并执行它
+            // 如果命令目标 ID 与代理 ID 相同，设置recentCommand和commandExecutorScout
             if (command.isToIDDefined() && Objects.requireNonNull(command.getToID())
                     .getValue() == agentID.getValue()) {
                 this.recentCommand = command;
@@ -263,14 +263,14 @@ public class DefaultTacticsAmbulanceTeam extends TacticsAmbulanceTeam {
         for (CommunicationMessage message : messageManager
                 .getReceivedMessageList(CommandAmbulance.class)) {
             CommandAmbulance command = (CommandAmbulance) message;
-            // 如果命令目标 ID 与代理 ID 相同，设置最近的命令并执行它
+            // 如果命令目标 ID 与代理 ID 相同，设置recentCommand和commandExecutorScout
             if (command.isToIDDefined() && Objects.requireNonNull(command.getToID())
                     .getValue() == agentID.getValue()) {
                 this.recentCommand = command;
                 this.commandExecutorAmbulance.setCommand(command);
             }
         }
-        // 如果找到有效的最近命令，执行相应的操作
+        // 如果找到有效的最近命令，执行相应的操作，然后返回action
         if (this.recentCommand != null) {
             Action action = null;
             if (this.recentCommand.getClass() == CommandAmbulance.class) {
@@ -284,21 +284,29 @@ public class DefaultTacticsAmbulanceTeam extends TacticsAmbulanceTeam {
             }
         }
 
-        // 自主操作的计算目标
+        // 如果没有找到有效的最近命令，则计算自主操作的目标
+
+        // 首先从人类探测器获取目标
         EntityID target = this.humanDetector.calc().getTarget();
+        // 运输动作根据探测器给出的目标计算需要执行的动作
         Action action = this.actionTransport.setTarget(target).calc().getAction();
-        if (action != null) {
-            this.sendActionMessage(messageManager, agent, action);
-            return action;
-        }
-        target = this.search.calc().getTarget();
-        action = this.actionExtMove.setTarget(target).calc().getAction();
+        // 如果找到下一步将要执行的动作则执行并返回
         if (action != null) {
             this.sendActionMessage(messageManager, agent, action);
             return action;
         }
 
-        // 如果未找到有效的操作，发送 REST 操作消息
+        // 如果没有找到，则根据搜索算法获取目标
+        target = this.search.calc().getTarget();
+        // 移动动作根据搜索算法给出的目标计算需要执行的动作
+        action = this.actionExtMove.setTarget(target).calc().getAction();
+        // 如果找到下一步将要执行的动作则执行并返回
+        if (action != null) {
+            this.sendActionMessage(messageManager, agent, action);
+            return action;
+        }
+
+        // 如果未找到有效的动作，发送 REST 操作消息，执行休息动作并返回
         messageManager.addMessage(new MessageAmbulanceTeam(true, agent,
                 MessageAmbulanceTeam.ACTION_REST, agent.getPosition()));
         return new ActionRest();
@@ -319,7 +327,7 @@ public class DefaultTacticsAmbulanceTeam extends TacticsAmbulanceTeam {
         int actionIndex = -1;
         EntityID target = null;
 
-        // 根据动作类确定动作指标和目标
+        // 根据动作类型确定动作索引和目标
         if (actionClass == ActionMove.class) {
             actionIndex = MessageAmbulanceTeam.ACTION_MOVE;
             List<EntityID> path = ((ActionMove) action).getPath();

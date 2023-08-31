@@ -94,7 +94,7 @@ public class DefaultTacticsFireBrigade extends TacticsFireBrigade {
         // 创建消息工具
         this.messageTool = new MessageTool(scenarioInfo, developData);
 
-        // 从方案配置中获取可视化调试标志
+        // 从配置中获取可视化调试标志
         this.isVisualDebug = (scenarioInfo.isDebugMode() && moduleManager
                 .getModuleConfig().getBooleanValue("VisualDebug", false));
 
@@ -208,7 +208,7 @@ public class DefaultTacticsFireBrigade extends TacticsFireBrigade {
     }
 
     /**
-     * 思考方法
+     * 策略思考方法
      * 在此方法中进行模块信息更新、可视化调试和发送消息等操作
      *
      * @param agentInfo      代理的信息
@@ -252,7 +252,7 @@ public class DefaultTacticsFireBrigade extends TacticsFireBrigade {
         for (CommunicationMessage message : messageManager
                 .getReceivedMessageList(CommandScout.class)) {
             CommandScout command = (CommandScout) message;
-            // 如果命令目标 ID 与代理 ID 相同，请设置最近的命令并执行它
+            // 如果命令目标 ID 与代理 ID 相同，设置recentCommand和commandExecutorScout
             if (command.isToIDDefined() && Objects.requireNonNull(command.getToID())
                     .getValue() == agentID.getValue()) {
                 this.recentCommand = command;
@@ -262,14 +262,14 @@ public class DefaultTacticsFireBrigade extends TacticsFireBrigade {
         for (CommunicationMessage message : messageManager
                 .getReceivedMessageList(CommandFire.class)) {
             CommandFire command = (CommandFire) message;
-            // 如果命令目标 ID 与代理 ID 相同，设置最近的命令并执行它
+            // 如果命令目标 ID 与代理 ID 相同，设置recentCommand和commandExecutorScout
             if (command.isToIDDefined() && Objects.requireNonNull(command.getToID())
                     .getValue() == agentID.getValue()) {
                 this.recentCommand = command;
                 this.commandExecutorFire.setCommand(command);
             }
         }
-        // 如果找到有效的最近命令，执行相应的操作
+        // 如果找到有效的最近命令，执行相应的操作，然后返回action
         if (this.recentCommand != null) {
             Action action = null;
             if (this.recentCommand.getClass() == CommandFire.class) {
@@ -283,21 +283,29 @@ public class DefaultTacticsFireBrigade extends TacticsFireBrigade {
             }
         }
 
-        // 自主操作的计算目标
+        // 如果没有找到有效的最近命令，则计算自主操作的目标
+
+        // 首先从人类探测器获取目标
         EntityID target = this.humanDetector.calc().getTarget();
+        // 救援动作根据探测器给出的目标计算需要执行的动作
         Action action = this.actionFireRescue.setTarget(target).calc().getAction();
-        if (action != null) {
-            this.sendActionMessage(messageManager, agent, action);
-            return action;
-        }
-        target = this.search.calc().getTarget();
-        action = this.actionExtMove.setTarget(target).calc().getAction();
+        // 如果找到下一步将要执行的动作则执行并返回
         if (action != null) {
             this.sendActionMessage(messageManager, agent, action);
             return action;
         }
 
-        // 如果未找到有效的操作，发送 REST 操作消息
+        // 如果没有找到，则根据搜索算法获取目标
+        target = this.search.calc().getTarget();
+        // 移动动作根据搜索算法给出的目标计算需要执行的动作
+        action = this.actionExtMove.setTarget(target).calc().getAction();
+        // 如果找到下一步将要执行的动作则执行并返回
+        if (action != null) {
+            this.sendActionMessage(messageManager, agent, action);
+            return action;
+        }
+
+        // 如果未找到有效的动作，发送 REST 操作消息，执行休息动作并返回
         messageManager.addMessage(new MessageFireBrigade(true, agent,
                 MessageFireBrigade.ACTION_REST, agent.getPosition()));
         return new ActionRest();
@@ -305,11 +313,12 @@ public class DefaultTacticsFireBrigade extends TacticsFireBrigade {
 
 
     /**
-     * Sends an action message to the message manager.
+     * 向消息管理器发送操作消息。
      *
      * @param messageManager The message manager
      * @param fireBrigade    The fire brigade agent
      * @param action         The action to be sent
+     * @author <a href="https://roozen.top">Roozen</a>
      */
     private void sendActionMessage(MessageManager messageManager,
                                    FireBrigade fireBrigade, Action action) {
@@ -317,7 +326,7 @@ public class DefaultTacticsFireBrigade extends TacticsFireBrigade {
         int actionIndex = -1;
         EntityID target = null;
 
-        // Determine the action index and target according to the action class
+        // 根据动作类型确定动作索引和目标
         if (actionClass == ActionMove.class) {
             actionIndex = MessageFireBrigade.ACTION_MOVE;
             List<EntityID> path = ((ActionMove) action).getPath();
@@ -332,7 +341,7 @@ public class DefaultTacticsFireBrigade extends TacticsFireBrigade {
             target = fireBrigade.getPosition();
         }
 
-        // If a valid action index is found, send the action message
+        // 如果找到有效的操作索引，发送操作消息
         if (actionIndex != -1) {
             messageManager.addMessage(
                     new MessageFireBrigade(true, fireBrigade, actionIndex, target));
